@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pacman -Sy --noconfirm pacman-contrib dialog
+pacman -Sy --noconfirm pacman-contrib dialog wget
 
 HOST=$(dialog --stdout --inputbox "Enter hostname" 0 0) || exit 1
 clear
@@ -10,16 +10,12 @@ USER=$(dialog --stdout --inputbox "Enter username" 0 0) || exit 1
 clear
 : ${USER:?"hostname cannot be empty"}
 
-USERPASS=$(dialog --stdout --inputbox "Enter password for ${USER}" 0 0) || exit 1
+PASS=$(dialog --stdout --passwordbox "Enter password for ${USER}" 0 0) || exit 1
 clear
-: ${USERPASS:?"user password cannot be empty"}
-
-ROOTPASS=$(dialog --stdout --inputbox "Enter password for root./nLeave blank to set as the same password as ${USER}" 0 0) || exit 1
+: ${PASS:?"user password cannot be empty"}
+CONFIRM=$(dialog --stdout --passwordbox "Enter admin password again" 0 0) || exit 1
 clear
-if [ -z "$ROOTPASS" ]
-then
-  $ROOTPASS = $USERPASS
-fi
+if [ "$PASS" != "$CONFIRM" ]; then echo "Passwords did not match"; exit 1; fi
 
 TGTDEV=$(dialog --stdout --inputbox "Enter drive name for install" 0 0) || exit 1
 clear
