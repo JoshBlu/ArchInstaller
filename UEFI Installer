@@ -1,0 +1,92 @@
+#!/bin/bash
+
+#Ask for:
+#TGTDEV
+#
+
+ping https://www.archlinux.org/ #Fail if no online
+
+timedatectl set-ntp true
+
+# to create the partitions programatically using fdisk
+sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk ${TGTDEV}
+  g # create GPT partition table
+  n # new partition
+  1 # partition number 1
+    # default - start at beginning of disk 
+  +550M # 550 MB boot parttion
+  n # new partition
+  2 # partion number 2
+    # default, start immediately after preceding partition
+  +2G # 2 GB swap partition 
+    n # new partition
+  3 # partion number 2
+    # default, start immediately after preceding partition
+    # fill rest of disk
+  t # change partition type
+  1 # change partition 1 type -- /dev/sda1
+  1 # change /dev/sda1 to EFI System partition
+  t # change partition type
+  2 # change partition 2 type -- /dev/sda2
+  19 # change /dev/sda2 to Linux Swap partition
+  w # write the partition table
+EOF
+
+boot="$(ls ${TGTDEV}* | grep -E "^${TGTDEV}p?1$")"
+swap="$(ls ${TGTDEV}* | grep -E "^${TGTDEV}p?2$")"
+root="$(ls ${TGTDEV}* | grep -E "^${TGTDEV}p?3$")"
+
+mkfs.fat -F32 "${boot}"
+mkswap "${swap}"
+mkfs.ext4 "${root}"
+
+swapon "${swap}"
+mount "${root}" /mnt
+mkdir /mnt/efi
+mount "${boot}" /mnt/efi
+
+pacstrap /mnt base linux linux-firmware
+
+genfstab -U /mnt >> /mnt/etc/fstab
+
+arch-chroot /mnt
+
+ls /usr/share/zoneinfo
+#Ask for Region
+ls /usr/share/zoneinfo/${REGION}
+#Ask for City
+ln -sf /usr/share/zoneinfo/${REGION}/${CITY} /etc/localtime
+hwclock --systohc
+
+echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
+locale-gen
+
+echo "${HOST}" >> /etc/hostname
+cat <<EOF >> /etc/hosts
+127.0.0.1 localhost
+::1 localhost
+127.0.1.1 "${HOST}".localdomain "${HOST}"
+
+echo "${ROOTPASS}" | passwd --stdin
+
+echo "${USER}" | useradd -m
+echo "${USERPASS}" | passwd --stdin "${USER}"
+usermod -aG wheel,audio,video,optical,storage "${USER}"
+
+pacman -S sudo
+echo 'wheel ALL=(ALL) ALL' | sudo EDITOR='tee -a' visudo
+
+pacman -S grub efibootmgr dosfstools os-prober mtools
+grub-install --target=x86_64-efi  --bootloader-id=grub_uefi --recheck
+grub-mkconfig -o /boot/grub/grub.cfg
+
+pacman -S networkmanager
+systemctl enable NetworkManager
+
+pacman -S vim git
+
+exit
+umount -l /mnt
+
+
+EOF
