@@ -1,10 +1,31 @@
 #!/bin/bash
 
-#Ask for:
-#TGTDEV
-#
+pacman -Sy --noconfirm pacman-contrib dialog
 
-ping https://www.archlinux.org/ #Fail if no online
+HOST=$(dialog --stdout --inputbox "Enter hostname" 0 0) || exit 1
+clear
+: ${HOST:?"hostname cannot be empty"}
+
+USER=$(dialog --stdout --inputbox "Enter username" 0 0) || exit 1
+clear
+: ${USER:?"hostname cannot be empty"}
+
+USERPASS=$(dialog --stdout --inputbox "Enter password for ${USER}" 0 0) || exit 1
+clear
+: ${USERPASS:?"user password cannot be empty"}
+
+ROOTPASS=$(dialog --stdout --inputbox "Enter password for root./nLeave blank to set as the same password as ${USER}" 0 0) || exit 1
+clear
+if [ -z "$ROOTPASS" ]
+then
+  $ROOTPASS = $USERPASS
+fi
+
+TGTDEV=$(dialog --stdout --inputbox "Enter drive name for install" 0 0) || exit 1
+clear
+: ${TGTDEV:?"drive name cannot be empty"}
+
+TIMEZONE = curl http://ip-api.com/line?fields=timezone
 
 timedatectl set-ntp true
 
@@ -51,11 +72,8 @@ genfstab -U /mnt >> /mnt/etc/fstab
 
 arch-chroot /mnt
 
-ls /usr/share/zoneinfo
-#Ask for Region
-ls /usr/share/zoneinfo/${REGION}
-#Ask for City
-ln -sf /usr/share/zoneinfo/${REGION}/${CITY} /etc/localtime
+
+ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime
 hwclock --systohc
 
 echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
@@ -73,17 +91,17 @@ echo "${USER}" | useradd -m
 echo "${USERPASS}" | passwd --stdin "${USER}"
 usermod -aG wheel,audio,video,optical,storage "${USER}"
 
-pacman -S sudo
+pacman -S --noconfirm sudo
 echo 'wheel ALL=(ALL) ALL' | sudo EDITOR='tee -a' visudo
 
-pacman -S grub efibootmgr dosfstools os-prober mtools
+pacman -S --noconfirm grub efibootmgr dosfstools os-prober mtools
 grub-install --target=x86_64-efi  --bootloader-id=grub_uefi --recheck
 grub-mkconfig -o /boot/grub/grub.cfg
 
-pacman -S networkmanager
+pacman -S --noconfirm networkmanager
 systemctl enable NetworkManager
 
-pacman -S vim git
+pacman -S --noconfirm vim git
 
 exit
 umount -l /mnt
