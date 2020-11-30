@@ -21,7 +21,7 @@ TGTDEV=$(dialog --stdout --inputbox "Enter drive name for install" 0 0) || exit 
 clear
 : ${TGTDEV:?"drive name cannot be empty"}
 
-TIMEZONE = curl http://ip-api.com/line?fields=timezone
+TIMEZONE = curl http://ip-api.com/line\?fields\=timezone
 
 timedatectl set-ntp true
 
