@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pacman -Sy --noconfirm pacman-contrib dialog wget
+pacman -Sy --noconfirm pacman-contrib dialog curl
 
 HOST=$(dialog --stdout --inputbox "Enter hostname" 0 0) || exit 1
 clear
